@@ -32,6 +32,7 @@ class PriceService : Service() {
         "https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT"
     )
     private var executor: ScheduledExecutorService? = null
+    private var interval = 1L
     private var last = 0.0
     private var color = Color.parseColor("#2E7D32")
     private lateinit var nm: NotificationManager
@@ -47,18 +48,18 @@ class PriceService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        interval = getSharedPreferences("s", MODE_PRIVATE).getInt("interval", 1).coerceIn(1, 3600).toLong()
         val n = build(null)
         if (Build.VERSION.SDK_INT >= 34) {
             startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
             startForeground(1, n)
         }
-        if (executor == null) {
-            executor = Executors.newSingleThreadScheduledExecutor().also {
-                it.scheduleWithFixedDelay({
-                    try { tick() } catch (e: Exception) { /* riprova al prossimo ciclo */ }
-                }, 0, 2, TimeUnit.SECONDS)
-            }
+        executor?.shutdownNow()
+        executor = Executors.newSingleThreadScheduledExecutor().also {
+            it.scheduleWithFixedDelay({
+                try { tick() } catch (e: Exception) { /* riprova al prossimo ciclo */ }
+            }, 0, interval, TimeUnit.SECONDS)
         }
         return START_STICKY
     }
@@ -100,7 +101,7 @@ class PriceService : Service() {
         return Notification.Builder(this, channelId)
             .setSmallIcon(iconFor(price))
             .setContentTitle(title)
-            .setContentText("Binance - aggiornamento ogni 2 secondi")
+            .setContentText("Binance - aggiornamento ogni " + interval + " s")
             .setColor(color)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
