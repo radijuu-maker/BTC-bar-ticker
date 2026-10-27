@@ -6,12 +6,16 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.text.InputType
 import android.view.Gravity
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 
 class MainActivity : Activity() {
+
+    private lateinit var input: EditText
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -21,11 +25,16 @@ class MainActivity : Activity() {
             setPadding(48, 48, 48, 48)
         }
         root.addView(TextView(this).apply {
-            text = "Prezzo BTC nella barra di stato, aggiornato ogni 2 secondi (dati Binance)."
+            text = "Prezzo BTC nella barra di stato (dati Binance).\nAggiorna ogni quanti secondi? (1 - 3600)"
             textSize = 16f
         })
+        input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(getSharedPreferences("s", MODE_PRIVATE).getInt("interval", 1).toString())
+        }
+        root.addView(input)
         root.addView(Button(this).apply {
-            text = "Avvia"
+            text = "Avvia / Applica"
             setOnClickListener { begin() }
         })
         root.addView(Button(this).apply {
@@ -39,6 +48,9 @@ class MainActivity : Activity() {
     }
 
     private fun begin() {
+        val sec = (input.text.toString().toIntOrNull() ?: 1).coerceIn(1, 3600)
+        input.setText(sec.toString())
+        getSharedPreferences("s", MODE_PRIVATE).edit().putInt("interval", sec).apply()
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
